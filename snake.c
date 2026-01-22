@@ -1,6 +1,5 @@
 /*Libraries and directives*/
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <windows.h>
 #include <time.h>
@@ -46,6 +45,7 @@ void setSnakeBodyPos(struct Snake*); //sets the positions for the snakes body
 bool Input(); //gets the input from the user
 void move(struct Position*); //changes a position
 void freePointers(); //frees the memory taken with malloc()
+bool isHeadInAValidPosition(); //checks if the head is in a valid position to turn and to update the body
 
 /*Global variables and constants*/
 #define FPS 30
@@ -59,6 +59,7 @@ struct Snake snake;
 int score = 0;
 int highscore;
 char direction = 'R'; //the direction the snake if going towards [R=Right, L=Left, U=Up, D=Down]
+char prevDirection = 'R';
 
 int main() {
 	Start();
@@ -69,6 +70,11 @@ int main() {
 	}
 	freePointers();
 	return 0;
+}
+
+bool isHeadInAValidPosition()
+{
+	return (snake.head.pos.x % 4 == 0 && snake.head.pos.y % 2 == 0);
 }
 
 void Start() {
@@ -87,39 +93,43 @@ void Start() {
 bool Update() {
 	DrawCanvas(canvas); //draws the canvas
 	//checks the overlapping of the apple and of the body with the head of the snake
-	for(int i = 0; i < snake.lenght; i++) { //checks overlap of head with body
+	for(int i = 4; i < snake.lenght; i++) { //checks overlap of head with body
 		if(checkOverlap(snake.head, snake.body[i])) return false;
 	}
+	bool appendUpdate = false;
     if(checkOverlap(snake.head, apple)) { //checks overlap of head with apple
 		score++;
 		randPosition(&apple.pos);
+		appendUpdate = true;
+	}
+	if(appendUpdate && isHeadInAValidPosition())
+	{
 		snake.lenght++;
 		snake.body = (struct Square*)realloc(snake.body, snake.lenght*sizeof(struct Square));
 		snake.previousPos = (struct Position*)realloc(snake.previousPos, (snake.lenght+1)*sizeof(struct Position));
 		defaultInitSquare(&snake.body[snake.lenght-1]);
+		//snake.body[snake.lenght-1].pos = snake.previousPos[snake.lenght];
+		appendUpdate = false;
 	}
 	//takes the input from the player and moves the snake
 	if(!Input()) return false;
 	move(&snake.head.pos);
-	//setSnakeBodyPos(&snake);
+	setSnakeBodyPos(&snake);
 	return true;
 }
 
-void setSnakeBodyPos(struct Snake *snk)
+void setSnakeBodyPos(struct Snake *snake)
 {
-	snk->previousPos[0] = snk->head.pos;
-	for(int i = 1; i < snk->lenght; i++)
+	snake->previousPos[0] = snake->head.pos;
+	for(int i = 1; i < snake->lenght; i++)
 	{
-		snk->previousPos[i] = snk->body[i-1].pos;
-		snk->previousPos[i].x -= 3;
-		snk->previousPos[i].y -= 1;
+		snake->previousPos[i] = snake->body[i-1].pos;
 	}
-	move(&snake.head.pos);
-	//snk->body[0].pos = snk->previousPos[0];
-	/*for(int i = 0; i < snk->lenght; i++)
+	snake->body[0].pos = snake->previousPos[0];
+	for(int i = 0; i < snake->lenght; i++)
 	{
-		snk->body[i+1].pos = snk->previousPos[i];
-	}*/
+		snake->body[i+1].pos = snake->previousPos[i];
+	}
 }
 
 void freePointers() {
@@ -135,33 +145,34 @@ bool Input() {
 			direction = 'L';
 		}
 		return true;
-    }
+	}
 	else if(GetKeyState('D') & 0x8000) {
 		if(direction != 'L') {
 			direction = 'R';
 		}
 		return true;
-    }
-    else if(GetKeyState('W') & 0x8000) {
+	}
+	else if(GetKeyState('W') & 0x8000) {
 		if(direction != 'D') {
 			direction = 'U';
 		}
 		return true;
-    }
-    else if(GetKeyState('S') & 0x8000) {
+	}
+	else if(GetKeyState('S') & 0x8000) {
 		if(direction != 'U') {
 			direction = 'D';
 		}
 		return true;
-    }
-    else if(GetKeyState('\x1B') & 0x8000) {
+	}
+    if(GetKeyState('\x1B') & 0x8000) {
 		return false;
     }
 	return true;
 }
 
 void move(struct Position *pos) {
-	switch(direction) {
+	if(isHeadInAValidPosition()) prevDirection = direction;
+	switch(prevDirection) {
 		case 'U': {
 			if(pos->y <= 0) {
 				pos->y += canvas.ConsoleSize.y-2;
@@ -180,8 +191,8 @@ void move(struct Position *pos) {
 			}
 			break;
 		}
-		case 'R': pos->x += 2; break;
-		case 'L': pos->x -= 2; break;
+		case 'R': (pos->x + 4 > canvas.ConsoleSize.x) ? (pos->x -= (canvas.ConsoleSize.x - 2)) : (pos->x += 2); break;
+		case 'L': (pos->x < canvas.ConsoleSize.x) ? (pos->x += (canvas.ConsoleSize.x + 2)) : (pos->x -= 2); break;
 	}
 }
 
