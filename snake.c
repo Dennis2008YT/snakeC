@@ -108,7 +108,7 @@ bool Update() {
 		snake.body = (struct Square*)realloc(snake.body, snake.lenght*sizeof(struct Square));
 		snake.previousPos = (struct Position*)realloc(snake.previousPos, (snake.lenght+1)*sizeof(struct Position));
 		defaultInitSquare(&snake.body[snake.lenght-1]);
-		//snake.body[snake.lenght-1].pos = snake.previousPos[snake.lenght];
+		snake.body[snake.lenght-1].pos = snake.previousPos[snake.lenght];
 		appendUpdate = false;
 	}
 	//takes the input from the player and moves the snake
